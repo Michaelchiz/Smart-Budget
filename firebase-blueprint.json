@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "currency": { "type": "string" },
+        "country": { "type": "string" },
+        "createdAt": { "type": "number", "description": "Timestamp" }
+      },
+      "required": ["currency", "country", "createdAt"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "A budget list",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "amount": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "name", "amount", "createdAt"]
+    },
+    "BudgetItem": {
+      "title": "Budget Item",
+      "description": "An item inside a budget",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "quantity": { "type": "number" },
+        "price": { "type": "number" },
+        "isChecked": { "type": "boolean" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "quantity", "price", "isChecked", "createdAt"]
+    },
+    "FoodList": {
+      "title": "Food List",
+      "description": "A list of food items for lifespan tracking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "startDate": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "name", "startDate", "createdAt"]
+    },
+    "FoodItem": {
+      "title": "Food Item",
+      "description": "An item inside a food list",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "measurement": { "type": "string" },
+        "portions": { "type": "number" },
+        "daysPerPortion": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "measurement", "portions", "daysPerPortion", "createdAt"]
+    },
+    "MealPlanEvent": {
+      "title": "Meal Plan Event",
+      "description": "A planned consumption of a food portion",
+      "type": "object",
+      "properties": {
+        "foodItemId": { "type": "string" },
+        "portionIndex": { "type": "number" },
+        "startOffset": { "type": "number" },
+        "durationDays": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["foodItemId", "portionIndex", "startOffset", "durationDays", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile"
+    },
+    "/budgets/{budgetId}": {
+      "schema": { "$ref": "#/entities/Budget" },
+      "description": "Budget lists"
+    },
+    "/budgets/{budgetId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/BudgetItem" },
+      "description": "Budget items"
+    },
+    "/foodLists/{listId}": {
+      "schema": { "$ref": "#/entities/FoodList" },
+      "description": "Food lists"
+    },
+    "/foodLists/{listId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/FoodItem" },
+      "description": "Food items"
+    },
+    "/foodLists/{listId}/events/{eventId}": {
+      "schema": { "$ref": "#/entities/MealPlanEvent" },
+      "description": "Meal plan events mapped to a calendar"
+    }
+  }
+}

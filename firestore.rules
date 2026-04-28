@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) { 
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+
+    // Validation rules
+    function isValidUser(data) {
+      return data.keys().hasAll(['currency', 'country', 'createdAt'])
+        && data.keys().size() <= 3
+        && data.currency is string && data.currency.size() <= 10
+        && data.country is string && data.country.size() <= 100
+        && data.createdAt is number;
+    }
+
+    function isValidBudget(data) {
+      return data.keys().hasAll(['userId', 'name', 'amount', 'createdAt'])
+        && data.keys().size() <= 4
+        && data.userId is string && data.userId == request.auth.uid
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.amount is number
+        && data.createdAt is number;
+    }
+
+    function isValidBudgetItem(data) {
+      return data.keys().hasAll(['name', 'quantity', 'price', 'isChecked', 'createdAt'])
+        && data.keys().size() <= 5
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.quantity is number
+        && data.price is number
+        && data.isChecked is bool
+        && data.createdAt is number;
+    }
+
+    function isValidFoodList(data) {
+      return data.keys().hasAll(['userId', 'name', 'startDate', 'createdAt'])
+        && data.keys().size() <= 4
+        && data.userId is string && data.userId == request.auth.uid
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.startDate is number
+        && data.createdAt is number;
+    }
+
+    function isValidFoodItem(data) {
+      return data.keys().hasAll(['name', 'measurement', 'portions', 'daysPerPortion', 'createdAt'])
+        && data.keys().size() <= 5
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.measurement is string && data.measurement.size() <= 50
+        && data.portions is number
+        && data.daysPerPortion is number
+        && data.createdAt is number;
+    }
+
+    function isValidMealPlanEvent(data) {
+      return data.keys().hasAll(['foodItemId', 'portionIndex', 'startOffset', 'durationDays', 'createdAt'])
+        && data.keys().size() <= 5
+        && data.foodItemId is string && data.foodItemId.size() <= 128
+        && data.portionIndex is number
+        && data.startOffset is number
+        && data.durationDays is number
+        && data.createdAt is number;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
+      allow update: if isSignedIn() && request.auth.uid == userId 
+                    && isValidUser(incoming()) 
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['currency', 'country']);
+    }
+
+    match /budgets/{budgetId} {
+      allow get: if isSignedIn() && isValidId(budgetId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(budgetId) && isValidBudget(incoming());
+      allow update: if isSignedIn() && isValidId(budgetId) && existing().userId == request.auth.uid 
+                    && isValidBudget(incoming())
+                    && incoming().userId == existing().userId
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'amount']);
+      allow delete: if isSignedIn() && isValidId(budgetId) && existing().userId == request.auth.uid;
+
+      match /items/{itemId} {
+        allow get: if isSignedIn() && isValidId(budgetId) && isValidId(itemId) 
+                   && get(/databases/$(database)/documents/budgets/$(budgetId)).data.userId == request.auth.uid;
+        allow list: if isSignedIn() && isValidId(budgetId) 
+                    && get(/databases/$(database)/documents/budgets/$(budgetId)).data.userId == request.auth.uid;
+        allow create: if isSignedIn() && isValidId(budgetId) && isValidId(itemId) 
+                      && get(/databases/$(database)/documents/budgets/$(budgetId)).data.userId == request.auth.uid
+                      && isValidBudgetItem(incoming());
+        allow update: if isSignedIn() && isValidId(budgetId) && isValidId(itemId) 
+                      && get(/databases/$(database)/documents/budgets/$(budgetId)).data.userId == request.auth.uid
+                      && isValidBudgetItem(incoming())
+                      && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'quantity', 'price', 'isChecked']);
+        allow delete: if isSignedIn() && isValidId(budgetId) && isValidId(itemId) 
+                      && get(/databases/$(database)/documents/budgets/$(budgetId)).data.userId == request.auth.uid;
+      }
+    }
+
+    match /foodLists/{listId} {
+      allow get: if isSignedIn() && isValidId(listId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(listId) && isValidFoodList(incoming());
+      allow update: if isSignedIn() && isValidId(listId) && existing().userId == request.auth.uid 
+                    && isValidFoodList(incoming())
+                    && incoming().userId == existing().userId
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'startDate']);
+      allow delete: if isSignedIn() && isValidId(listId) && existing().userId == request.auth.uid;
+
+      match /items/{itemId} {
+        allow get: if isSignedIn() && isValidId(listId) && isValidId(itemId) 
+                   && get(/databases/$(database)/documents/foodLists/$(listId)).data.userId == request.auth.uid;
+        allow list: if isSignedIn() && isValidId(listId) 
+                    && get(/databases/$(database)/documents/foodLists/$(listId)).data.userId == request.auth.uid;
+        allow create: if isSignedIn() && isValidId(listId) && isValidId(itemId) 
+                      && get(/databases/$(database)/documents/foodLists/$(listId)).data.userId == request.auth.uid
+                      && isValidFoodItem(incoming());
+        allow update: if isSignedIn() && isValidId(listId) && isValidId(itemId) 
+                      && get(/databases/$(database)/documents/foodLists/$(listId)).data.userId == request.auth.uid
+                      && isValidFoodItem(incoming())
+                      && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'measurement', 'portions', 'daysPerPortion']);
+        allow delete: if isSignedIn() && isValidId(listId) && isValidId(itemId) 
+                      && get(/databases/$(database)/documents/foodLists/$(listId)).data.userId == request.auth.uid;
+      }
+
+      match /events/{eventId} {
+        allow get: if isSignedIn() && isValidId(listId) && isValidId(eventId) 
+                   && get(/databases/$(database)/documents/foodLists/$(listId)).data.userId == request.auth.uid;
+        allow list: if isSignedIn() && isValidId(listId) 
+                    && get(/databases/$(database)/documents/foodLists/$(listId)).data.userId == request.auth.uid;
+        allow create: if isSignedIn() && isValidId(listId) && isValidId(eventId) 
+                      && get(/databases/$(database)/documents/foodLists/$(listId)).data.userId == request.auth.uid
+                      && isValidMealPlanEvent(incoming());
+        allow update: if isSignedIn() && isValidId(listId) && isValidId(eventId) 
+                      && get(/databases/$(database)/documents/foodLists/$(listId)).data.userId == request.auth.uid
+                      && isValidMealPlanEvent(incoming())
+                      && incoming().diff(existing()).affectedKeys().hasOnly(['startOffset']);
+        allow delete: if isSignedIn() && isValidId(listId) && isValidId(eventId) 
+                      && get(/databases/$(database)/documents/foodLists/$(listId)).data.userId == request.auth.uid;
+      }
+    }
+  }
+}

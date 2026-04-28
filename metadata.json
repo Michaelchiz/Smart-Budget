@@ -1,0 +1,6 @@
+{
+  "name": "Digital Budget & Pantry",
+  "description": "A digital budgeting tool with an inbuilt calculator and a food lifespan planning calendar. Supports local currencies and shopping modes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
